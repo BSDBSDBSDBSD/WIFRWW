@@ -52,6 +52,94 @@ class MainActivity : AppCompatActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 100)
         }
+
+        setupPermanentSection()
+    }
+
+    // --- Permanent system-level lock / key section ---
+
+    private fun setupPermanentSection() {
+        val tvTitle = findViewById<TextView>(R.id.tvPermanentTitle)
+        val tvDescription = findViewById<TextView>(R.id.tvPermanentDescription)
+        val btnAction = findViewById<Button>(R.id.btnPermanentAction)
+        val tvLog = findViewById<TextView>(R.id.tvPermanentLog)
+
+        if (BuildConfig.IS_LOCK) {
+            tvTitle.text = "נעילה קבועה (Netfree Lock)"
+            tvDescription.text = "מגבה את תעודות ה-CA הנוכחיות של המכשיר, ואז מחליף אותן " +
+                "בתעודות נטפרי בלבד - קבוע, ברמת המערכת, ולא תלוי באפליקציה רצה. " +
+                "לאחר מכן האפליקציה הזו תמחק את עצמה. אזהרה: אתרים ואפליקציות שלא " +
+                "עוברים דרך סינון נטפרי (כולל אפליקציות בנקים עם certificate pinning) " +
+                "עלולים להפסיק לעבוד לגמרי."
+            btnAction.text = "בצע נעילה קבועה ומחק את האפליקציה"
+            btnAction.setOnClickListener { confirmLock(tvLog) }
+        } else {
+            tvTitle.text = "שחרור נעילה (Netfree Key)"
+            tvDescription.text = "משחזר את תעודות ה-CA המקוריות שגובו על ידי Netfree Lock, " +
+                "ומבטל את הנעילה הקבועה."
+            btnAction.text = "שחרר נעילה (שחזר תעודות מקוריות)"
+            btnAction.setOnClickListener { confirmUnlock(tvLog) }
+        }
+    }
+
+    private fun confirmLock(tvLog: TextView) {
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("נעילה קבועה")
+            .setMessage(
+                "פעולה זו תגבה את תעודות ה-CA הנוכחיות, תחליף אותן בתעודות נטפרי בלבד, " +
+                    "ותמחק את האפליקציה הזו. בלי האפליקציה השנייה (Netfree Key) לא תוכל " +
+                    "לשחזר בעצמך. להמשיך?"
+            )
+            .setPositiveButton("נעל") { _, _ -> performLock(tvLog) }
+            .setNegativeButton("ביטול", null)
+            .show()
+    }
+
+    private fun performLock(tvLog: TextView) {
+        tvLog.text = "בודק הרשאת root..."
+        Thread {
+            if (!CaCertsBackupManager.isRootAvailable()) {
+                runOnUiThread { tvLog.text = "לא זוהתה הרשאת root" }
+                return@Thread
+            }
+            runOnUiThread { tvLog.text = "מגבה ומחליף תעודות... (אשר את בקשת ה-root)" }
+            val result = CaCertsBackupManager.backupAndReplace(applicationContext)
+            if (!result.success) {
+                runOnUiThread { tvLog.text = "הנעילה נכשלה:\n${result.log}" }
+                return@Thread
+            }
+            runOnUiThread { tvLog.text = "הנעילה בוצעה. מוחק את האפליקציה..." }
+            CaCertsBackupManager.uninstallSelf(applicationContext)
+            runOnUiThread { tvLog.text = "בוצע. האפליקציה תוסר כעת." }
+        }.start()
+    }
+
+    private fun confirmUnlock(tvLog: TextView) {
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("שחרור נעילה")
+            .setMessage("פעולה זו תשחזר את תעודות ה-CA המקוריות ותבטל את הנעילה הקבועה. להמשיך?")
+            .setPositiveButton("שחרר") { _, _ -> performUnlock(tvLog) }
+            .setNegativeButton("ביטול", null)
+            .show()
+    }
+
+    private fun performUnlock(tvLog: TextView) {
+        tvLog.text = "בודק הרשאת root..."
+        Thread {
+            if (!CaCertsBackupManager.isRootAvailable()) {
+                runOnUiThread { tvLog.text = "לא זוהתה הרשאת root" }
+                return@Thread
+            }
+            if (!CaCertsBackupManager.hasBackup()) {
+                runOnUiThread { tvLog.text = "לא נמצא גיבוי במכשיר הזה - אין מה לשחזר" }
+                return@Thread
+            }
+            runOnUiThread { tvLog.text = "משחזר תעודות מקוריות..." }
+            val result = CaCertsBackupManager.restoreBackup()
+            runOnUiThread {
+                tvLog.text = if (result.success) "הנעילה שוחררה בהצלחה ✔" else "השחזור נכשל:\n${result.log}"
+            }
+        }.start()
     }
 
     private fun installCerts() {

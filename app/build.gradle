@@ -15,6 +15,26 @@ android {
         versionName "1.0"
     }
 
+    flavorDimensions "role"
+    productFlavors {
+        lock {
+            dimension "role"
+            applicationIdSuffix ".lock"
+            buildConfigField "boolean", "IS_LOCK", "true"
+            resValue "string", "app_name", "Netfree Lock"
+        }
+        key {
+            dimension "role"
+            applicationIdSuffix ".key"
+            buildConfigField "boolean", "IS_LOCK", "false"
+            resValue "string", "app_name", "Netfree Key"
+        }
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
     signingConfigs {
         debug {
             storeFile file('../debug.keystore')
