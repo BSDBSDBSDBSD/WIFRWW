@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <TextView
+        android:id="@+id/tvStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="16sp"
+        android:paddingBottom="16dp"
+        android:text="סטטוס: לא מוגדר" />
+
+    <Button
+        android:id="@+id/btnInstallCerts"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="שלב 1: התקן תעודות נטפרי (דורש רוט - פעם אחת)" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:text="שלב 2: הגדר את כתובת/פורט שרת הבדיקה של נטפרי (מהמסמכים הרשמיים של נטפרי או מהתמיכה שלהם):" />
+
+    <EditText
+        android:id="@+id/etCheckHost"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="לדוגמה: host.netfree.example:443" />
+
+    <Button
+        android:id="@+id/btnSaveHost"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="שמור כתובת בדיקה" />
+
+    <Switch
+        android:id="@+id/switchProtection"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:text="שלב 3: הפעל הגנה (חסימת רשתות לא מסוננות)" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:textSize="12sp"
+        android:text="הערה: איפוס יצרן (Factory Reset) ימחק את כל השינויים, כולל התעודות שהותקנו - זו התנהגות מכוונת ותקינה." />
+
+</LinearLayout>
