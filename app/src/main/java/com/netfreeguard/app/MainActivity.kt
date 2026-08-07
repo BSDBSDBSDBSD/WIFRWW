@@ -66,11 +66,12 @@ class MainActivity : AppCompatActivity() {
 
         if (BuildConfig.IS_LOCK) {
             tvTitle.text = "נעילה קבועה (Netfree Lock)"
-            tvDescription.text = "מגבה את תעודות ה-CA הנוכחיות של המכשיר, ואז מחליף אותן " +
-                "בתעודות נטפרי בלבד - קבוע, ברמת המערכת, ולא תלוי באפליקציה רצה. " +
-                "לאחר מכן האפליקציה הזו תמחק את עצמה. אזהרה: אתרים ואפליקציות שלא " +
-                "עוברים דרך סינון נטפרי (כולל אפליקציות בנקים עם certificate pinning) " +
-                "עלולים להפסיק לעבוד לגמרי."
+            tvDescription.text = "מגבה את תעודות ה-CA הנוכחיות, מחליף אותן בתעודות נטפרי בלבד, " +
+                "ומתקין שומר-רשת קבוע ב-/system שבודק כל 30 שניות (לפי חתימת התעודה) שהחיבור " +
+                "אכן מסונן - וחוסם את כל שאר האפליקציות אם לא. הכל שורד איפוס יצרן רגיל, " +
+                "ולא תלוי באפליקציה רצה. לאחר מכן האפליקציה הזו תמחק את עצמה. אזהרה: " +
+                "אתרים ואפליקציות שלא עוברים דרך סינון נטפרי (כולל אפליקציות בנקים עם " +
+                "certificate pinning) עלולים להפסיק לעבוד לגמרי."
             btnAction.text = "בצע נעילה קבועה ומחק את האפליקציה"
             btnAction.setOnClickListener { confirmLock(tvLog) }
         } else {
@@ -103,9 +104,15 @@ class MainActivity : AppCompatActivity() {
                 return@Thread
             }
             runOnUiThread { tvLog.text = "מגבה ומחליף תעודות... (אשר את בקשת ה-root)" }
-            val result = CaCertsBackupManager.backupAndReplace(applicationContext)
-            if (!result.success) {
-                runOnUiThread { tvLog.text = "הנעילה נכשלה:\n${result.log}" }
+            val certResult = CaCertsBackupManager.backupAndReplace(applicationContext)
+            if (!certResult.success) {
+                runOnUiThread { tvLog.text = "הנעילה נכשלה:\n${certResult.log}" }
+                return@Thread
+            }
+            runOnUiThread { tvLog.text = "מתקין שומר-רשת קבוע ב-/system..." }
+            val guardResult = NetworkGuardManager.install(applicationContext)
+            if (!guardResult.success) {
+                runOnUiThread { tvLog.text = "התעודות הוחלפו אבל שומר-הרשת נכשל:\n${guardResult.log}" }
                 return@Thread
             }
             runOnUiThread { tvLog.text = "הנעילה בוצעה. מוחק את האפליקציה..." }
@@ -135,9 +142,15 @@ class MainActivity : AppCompatActivity() {
                 return@Thread
             }
             runOnUiThread { tvLog.text = "משחזר תעודות מקוריות..." }
-            val result = CaCertsBackupManager.restoreBackup()
+            val certResult = CaCertsBackupManager.restoreBackup()
+            runOnUiThread { tvLog.text = "מסיר את שומר-הרשת הקבוע..." }
+            val guardResult = NetworkGuardManager.uninstall()
             runOnUiThread {
-                tvLog.text = if (result.success) "הנעילה שוחררה בהצלחה ✔" else "השחזור נכשל:\n${result.log}"
+                tvLog.text = when {
+                    certResult.success && guardResult.success -> "הנעילה שוחררה בהצלחה במלואה ✔"
+                    certResult.success -> "התעודות שוחזרו, אך הסרת שומר-הרשת נכשלה:\n${guardResult.log}"
+                    else -> "השחזור נכשל:\n${certResult.log}"
+                }
             }
         }.start()
     }
